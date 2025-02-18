@@ -30,13 +30,14 @@ const App: React.FC = () => {
       const value = await AsyncStorage.getItem("storedText");
       if (value !== null) {
         setStoredText(value);
+        console.log("Text loaded successfully:", text);
       }
     } catch (error) {
       console.error("Error loading data:", error);
     }
   };
 
-  const speak = (): void => {
+  const speak = () => {
     Speech.speak(storedText || "Hello! Type something and save it.");
   };
 
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   draggable: {
     width: 100,
     height: 100,
-    backgroundColor: "red",
+    backgroundColor: "black",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
