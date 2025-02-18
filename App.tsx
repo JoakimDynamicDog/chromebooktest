@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   View, 
   Text, 
@@ -6,7 +6,8 @@ import {
   TextInput, 
   PanResponder, 
   Animated,  
-  StyleSheet 
+  StyleSheet, 
+  FlatList
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -14,7 +15,22 @@ import * as Speech from "expo-speech";
 const App: React.FC = () => {
   const [text, setText] = useState<string>("");
   const [storedText, setStoredText] = useState<string>("");
+  const [voices, setVoices] = useState<Speech.Voice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+
   const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  useEffect(() => {
+    const fetchVoices = async () => {
+      const availableVoices = await Speech.getAvailableVoicesAsync();
+      console.log(availableVoices);
+      setVoices(availableVoices);
+      if (availableVoices.length > 0) {
+        setSelectedVoice(availableVoices[0].identifier);
+      }
+    };
+    fetchVoices();
+  }, []);
 
   const saveData = async (): Promise<void> => {
     try {
@@ -38,8 +54,20 @@ const App: React.FC = () => {
   };
 
   const speak = () => {
-    Speech.speak(storedText || "Hello! Type something and save it.");
+    const voiceToUse = selectedVoice || voices[0]?.identifier || null;
+  
+    if (!voiceToUse) {
+      alert("No available voices on this device.");
+      return;
+    }
+  
+    Speech.speak(storedText || "Hello! Type something and save it.", {
+      voice: voiceToUse,
+      pitch: 1.0,
+      rate: 1.0,
+    });
   };
+  
 
   const panResponder = useRef(
     PanResponder.create({
@@ -73,6 +101,27 @@ const App: React.FC = () => {
       <TouchableOpacity onPress={speak} style={[styles.button, styles.buttonPurple]}>
         <Text style={styles.buttonText}>Speaka</Text>
       </TouchableOpacity>
+
+      <Text style={styles.title}>Select a Voice:</Text>
+      <View style={styles.voiceListContainer}>
+        <FlatList
+          data={voices}
+          keyExtractor={(item) => item.identifier}
+          style={{ maxHeight: 200 }} 
+          nestedScrollEnabled={true} 
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.voiceItem,
+                selectedVoice === item.identifier && styles.selectedVoice,
+              ]}
+              onPress={() => setSelectedVoice(item.identifier)}
+            >
+              <Text style={styles.voiceText}>{item.name} ({item.language})</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
       <Animated.View
         {...panResponder.panHandlers}
@@ -130,6 +179,33 @@ const styles = StyleSheet.create({
   draggableText: {
     color: "white",
     fontWeight: "bold",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  voiceListContainer: {
+    maxHeight: 200, 
+    width: "100%",
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+  },
+  voiceItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    width: "100%",
+    alignItems: "center",
+  },
+  selectedVoice: {
+    backgroundColor: "#d0f0c0",
+  },
+  voiceText: {
+    fontSize: 16,
   },
 });
 
